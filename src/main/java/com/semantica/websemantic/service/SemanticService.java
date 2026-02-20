@@ -10,12 +10,10 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
 import org.springframework.stereotype.Service;
-
 @Service
 public class SemanticService {
 
     private final Dataset dataset;
-    // Definimos tu ontología base
     private final String NS = "http://localhost:8081/ontology#";
 
     public SemanticService(Dataset dataset) {
@@ -27,10 +25,9 @@ public class SemanticService {
         dataset.begin(ReadWrite.WRITE);
         try {
             Model model = dataset.getDefaultModel();
-            // URI única: http://.../vehiculo/1
-            Resource vehiculoRes = model.createResource(NS + "vehiculo/" + dto.getId());
+            // CORRECCIÓN: Usamos la placa desde el inicio
+            Resource vehiculoRes = model.createResource(NS + "vehiculo/" + dto.getPlaca());
 
-            // Definir Tipo y Propiedades
             vehiculoRes.addProperty(RDF.type, model.createResource(NS + "Vehiculo"));
             if(dto.getPlaca() != null)
                 vehiculoRes.addProperty(model.createProperty(NS + "placa"), dto.getPlaca());
@@ -46,7 +43,9 @@ public class SemanticService {
         dataset.begin(ReadWrite.WRITE);
         try {
             Model model = dataset.getDefaultModel();
-            Resource mecanicoRes = model.createResource(NS + "mecanico/" + dto.getId());
+            // CORRECCIÓN: Usamos el nombre desde el inicio (quitando espacios por seguridad)
+            String nombreURI = dto.getNombre().replaceAll(" ", "_");
+            Resource mecanicoRes = model.createResource(NS + "mecanico/" + nombreURI);
 
             mecanicoRes.addProperty(RDF.type, model.createResource(NS + "Mecanico"));
             if(dto.getNombre() != null)
@@ -65,22 +64,24 @@ public class SemanticService {
             Model model = dataset.getDefaultModel();
             Resource mantRes = model.createResource(NS + "mantenimiento/" + dto.getId());
 
-            // Tipo
             mantRes.addProperty(RDF.type, model.createResource(NS + "Mantenimiento"));
 
-            // CONEXIONES (Object Properties)
-            // Conectar con el Vehículo existente
-            Resource vehiculoRes = model.createResource(NS + "vehiculo/" + dto.getVehiculo().getId());
-            mantRes.addProperty(model.createProperty(NS + "realizadoEn"), vehiculoRes);
+            // Conectar con el Vehículo existente (Usando placa)
+            if(dto.getVehiculo() != null && dto.getVehiculo().getPlaca() != null) {
+                Resource vehiculoRes = model.createResource(NS + "vehiculo/" + dto.getVehiculo().getPlaca());
+                mantRes.addProperty(model.createProperty(NS + "realizadoEn"), vehiculoRes);
+            }
 
-            // Conectar con el Mecánico existente
-            Resource mecanicoRes = model.createResource(NS + "mecanico/" + dto.getMecanico().getId());
-            mantRes.addProperty(model.createProperty(NS + "realizadoPor"), mecanicoRes);
+            // Conectar con el Mecánico existente (Usando nombre sin espacios)
+            if(dto.getMecanico() != null && dto.getMecanico().getNombre() != null) {
+                String nombreURI = dto.getMecanico().getNombre().replaceAll(" ", "_");
+                Resource mecanicoRes = model.createResource(NS + "mecanico/" + nombreURI);
+                mantRes.addProperty(model.createProperty(NS + "realizadoPor"), mecanicoRes);
+            }
 
             dataset.commit();
         } finally { dataset.end(); }
     }
 
-    // Aquí iría el método getDataset() que hicimos antes
     public Dataset getDataset() { return dataset; }
 }

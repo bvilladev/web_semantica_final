@@ -20,11 +20,24 @@ public class SemanticController {
 
     // SOLO métodos de lectura/consulta
 
-    @GetMapping("/sparql")
-    public ResponseEntity<String> ejecutarSparql(@RequestParam String queryStr) {
-        // ... (Tu código de consulta SPARQL que ya tenías)
-        // Si no lo tienes a mano, avísame y te lo pego de nuevo
-        return ResponseEntity.ok("Resultado..."); // Simplificado para el ejemplo
+    @PostMapping("/sparql")
+    public ResponseEntity<String> ejecutarSparql(@RequestBody String queryStr) {
+        Dataset ds = semanticService.getDataset();
+        ds.begin(ReadWrite.READ);
+        try (QueryExecution qExec = QueryExecutionFactory.create(queryStr, ds)) {
+            // Ejecutamos la consulta SELECT
+            ResultSet results = qExec.execSelect();
+
+            // Convertimos el resultado a formato JSON
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            ResultSetFormatter.outputAsJSON(outputStream, results);
+
+            return ResponseEntity.ok(outputStream.toString());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error en la consulta SPARQL: " + e.getMessage());
+        } finally {
+            ds.end();
+        }
     }
 
     @GetMapping("/grafo")
