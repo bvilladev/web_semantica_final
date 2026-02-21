@@ -2,6 +2,7 @@ package com.semantica.websemantic.service;
 
 import com.semantica.websemantic.dto.MantenimientoDTO;
 import com.semantica.websemantic.dto.MecanicoDTO;
+import com.semantica.websemantic.dto.ServicioDTO;
 import com.semantica.websemantic.dto.VehiculoDTO;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -29,6 +30,11 @@ public class TallerClient {
     public List<MantenimientoDTO> obtenerTodosLosMantenimientos() {
         // Llama a tu endpoint GET existente [Línea 4 de controllers.txt]
         MantenimientoDTO[] response = restTemplate.getForObject(BASE_URL + "/mantenimiento", MantenimientoDTO[].class);
+        return Arrays.asList(response);
+    }
+    public List<ServicioDTO> obtenerTodosLosServicios() {
+        // Llama al endpoint GET /api/v1/servicio de tu proyecto original
+        ServicioDTO[] response = restTemplate.getForObject(BASE_URL + "/servicio", ServicioDTO[].class);
         return Arrays.asList(response);
     }
 }

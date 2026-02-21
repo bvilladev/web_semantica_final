@@ -3,6 +3,7 @@ package com.semantica.websemantic.controller;
 
 import com.semantica.websemantic.dto.MantenimientoDTO;
 import com.semantica.websemantic.dto.MecanicoDTO;
+import com.semantica.websemantic.dto.ServicioDTO;
 import com.semantica.websemantic.dto.VehiculoDTO;
 import com.semantica.websemantic.service.SemanticService;
 import com.semantica.websemantic.service.TallerClient;
@@ -13,10 +14,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
 @Slf4j
 @RestController
-@RequestMapping("/api/semantica/ingesta") // Prefijo base DIFERENTE o específico
+@RequestMapping("/api/semantica/ingesta")
 public class IngestaController {
 
     private final SemanticService semanticService;
@@ -33,22 +33,29 @@ public class IngestaController {
         return "hola bnn";
     }
 
-    // Endpoint principal para cargar todo desde MySQL
     @PostMapping("/cargar-todo")
     public ResponseEntity<String> cargarDatosDesdeBaseDeDatos() {
-        // 1. Traer datos
+        // 1. Traer datos de todas las 4 tablas
         List<VehiculoDTO> vehiculos = tallerClient.obtenerTodosLosVehiculos();
         List<MecanicoDTO> mecanicos = tallerClient.obtenerTodosLosMecanicos();
         List<MantenimientoDTO> mantenimientos = tallerClient.obtenerTodosLosMantenimientos();
 
+        // NUEVO: Traer los servicios
+        List<ServicioDTO> servicios = tallerClient.obtenerTodosLosServicios();
 
-        log.error("Datos obtenidos:{}", vehiculos.get(2).getPlaca());
+        if(!vehiculos.isEmpty()) {
+            log.info("Datos obtenidos de vehículo de prueba: {}", vehiculos.get(0).getPlaca());
+        }
 
-        // 2. Procesar
+        // 2. Procesar (Convertir a Tripletas RDF)
+        // IMPORTANTE: Primero procesamos las entidades maestras (Vehiculo, Mecanico, Servicio)
         for (VehiculoDTO v : vehiculos) semanticService.procesarVehiculo(v);
         for (MecanicoDTO m : mecanicos) semanticService.procesarMecanico(m);
+        for (ServicioDTO s : servicios) semanticService.procesarServicio(s); // NUEVO
+
+        // Al final procesamos el Mantenimiento, porque es el que conecta a los demás
         for (MantenimientoDTO mant : mantenimientos) semanticService.procesarMantenimiento(mant);
 
-        return ResponseEntity.ok("Carga completa.");
+        return ResponseEntity.ok("Carga completa. Tablas procesadas: Vehículos, Mecánicos, Servicios y Mantenimientos.");
     }
 }
