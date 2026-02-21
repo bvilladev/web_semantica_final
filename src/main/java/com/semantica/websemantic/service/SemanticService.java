@@ -5,6 +5,7 @@ import com.semantica.websemantic.dto.MantenimientoDTO;
 import com.semantica.websemantic.dto.MecanicoDTO;
 import com.semantica.websemantic.dto.ServicioDTO;
 import com.semantica.websemantic.dto.VehiculoDTO;
+import org.apache.jena.ontology.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
@@ -17,17 +18,20 @@ import org.springframework.stereotype.Service;
 public class SemanticService {
 
     private final Dataset dataset;
+    private final OntModel ontModel; // 1. AGREGAMOS EL MODELO INTELIGENTE
     private final String NS = "http://localhost:8081/ontology#";
 
-    public SemanticService(Dataset dataset) {
+    // 2. INYECTAMOS AMBOS EN EL CONSTRUCTOR
+    public SemanticService(Dataset dataset, OntModel ontModel) {
         this.dataset = dataset;
+        this.ontModel = ontModel;
     }
 
     // --- 1. PROCESAR VEHÍCULO ---
     public void procesarVehiculo(VehiculoDTO dto) {
         dataset.begin(ReadWrite.WRITE);
         try {
-            Model model = dataset.getDefaultModel();
+            Model model = ontModel;
             Resource vehiculoRes = model.createResource(NS + "vehiculo/" + dto.getPlaca());
 
             vehiculoRes.addProperty(RDF.type, model.createResource(NS + "Vehiculo"));
@@ -47,7 +51,7 @@ public class SemanticService {
     public void procesarMecanico(MecanicoDTO dto) {
         dataset.begin(ReadWrite.WRITE);
         try {
-            Model model = dataset.getDefaultModel();
+            Model model = ontModel;
             String nombreURI = dto.getNombre().replaceAll(" ", "_");
             Resource mecanicoRes = model.createResource(NS + "mecanico/" + nombreURI);
 
@@ -68,7 +72,7 @@ public class SemanticService {
     public void procesarServicio(ServicioDTO dto) {
         dataset.begin(ReadWrite.WRITE);
         try {
-            Model model = dataset.getDefaultModel();
+            Model model = ontModel;
             // Usamos el ID o un nombre formateado para la URI
             Resource servicioRes = model.createResource(NS + "servicio/" + dto.getId());
 
@@ -88,7 +92,7 @@ public class SemanticService {
     public void procesarMantenimiento(MantenimientoDTO dto) {
         dataset.begin(ReadWrite.WRITE);
         try {
-            Model model = dataset.getDefaultModel();
+            Model model = ontModel;
             Resource mantRes = model.createResource(NS + "mantenimiento/" + dto.getId());
 
             mantRes.addProperty(RDF.type, model.createResource(NS + "Mantenimiento"));
