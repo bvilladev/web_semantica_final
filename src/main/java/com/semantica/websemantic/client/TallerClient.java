@@ -1,9 +1,9 @@
-package com.semantica.websemantic.service;
+package com.semantica.websemantic.client;
 
-import com.semantica.websemantic.dto.MantenimientoDTO;
-import com.semantica.websemantic.dto.MecanicoDTO;
-import com.semantica.websemantic.dto.ServicioDTO;
-import com.semantica.websemantic.dto.VehiculoDTO;
+import com.semantica.websemantic.entity.dto.MantenimientoDTO;
+import com.semantica.websemantic.entity.dto.MecanicoDTO;
+import com.semantica.websemantic.entity.dto.ServicioDTO;
+import com.semantica.websemantic.entity.dto.VehiculoDTO;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import java.util.Arrays;
@@ -13,7 +13,7 @@ import java.util.List;
 public class TallerClient {
 
     private final RestTemplate restTemplate = new RestTemplate();
-    private final String BASE_URL = "http://localhost:8080/api/v1"; // URL de tu Taller original
+    private final String BASE_URL = "https://machine.yoelfernandez.shop/api/v1"; // URL de tu Taller original
 
     public List<VehiculoDTO> obtenerTodosLosVehiculos() {
         // Llama a tu endpoint GET existente [Línea 17 de controllers.txt]
@@ -32,6 +32,7 @@ public class TallerClient {
         MantenimientoDTO[] response = restTemplate.getForObject(BASE_URL + "/mantenimiento", MantenimientoDTO[].class);
         return Arrays.asList(response);
     }
+
     public List<ServicioDTO> obtenerTodosLosServicios() {
         // Llama al endpoint GET /api/v1/servicio de tu proyecto original
         ServicioDTO[] response = restTemplate.getForObject(BASE_URL + "/servicio", ServicioDTO[].class);

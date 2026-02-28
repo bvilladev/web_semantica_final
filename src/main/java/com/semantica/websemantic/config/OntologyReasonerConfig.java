@@ -1,5 +1,6 @@
 package com.semantica.websemantic.config;
 
+import com.semantica.websemantic.vocabulary.SemanticVocab;
 import org.apache.jena.ontology.ObjectProperty;
 import org.apache.jena.ontology.OntModel;
 import org.apache.jena.ontology.OntModelSpec;
@@ -15,81 +16,79 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OntologyReasonerConfig {
 
-    private final String NS = "http://localhost:8081/ontology#";
-    // Incorporamos el vocabulario estándar mundial FOAF para personas
-    private final String FOAF_NS = "http://xmlns.com/foaf/0.1/";
-
-
     @Bean
     public OntModel ontologyModel(Dataset dataset) {
-        // 1. Envolvemos tu modelo base con un Reasoner (Motor de Inferencia OWL)
-        // Usamos OWL_MEM_MICRO_RULE_INF: Soporta propiedades inversas, simétricas y jerarquías
+        // ¡ESTA ES LA LÍNEA QUE TE FALTABA O SE BORRÓ!
+        // Aquí es donde "nace" la variable ontModel
         OntModel ontModel = ModelFactory.createOntologyModel(OntModelSpec.OWL_MEM_MICRO_RULE_INF, dataset.getDefaultModel());
 
-
-        // Iniciamos transacción para guardar las reglas en el grafo
         dataset.begin(ReadWrite.WRITE);
         try {
-
             // =================================================================
-            // 1. REUTILIZACIÓN DE ONTOLOGÍAS EXTERNAS (LINKED DATA)
+            // 1. REUTILIZACIÓN DE ONTOLOGÍAS EXTERNAS (FOAF)
             // =================================================================
-            Resource foafPerson = ontModel.createResource(FOAF_NS + "Person");
+            // Usamos SemanticVocab.FOAF en lugar del texto quemado
+            Resource foafPerson = ontModel.createResource(SemanticVocab.FOAF + "Person");
             foafPerson.addProperty(RDF.type, RDFS.Class);
 
             // =================================================================
-            // 2. DEFINICIÓN DE SUPERCLASES (NIVEL ALTO)
+            // 2. DEFINICIÓN DE SUPERCLASES
             // =================================================================
-            Resource clasePersona = ontModel.createResource(NS + "Persona");
+            // Usamos SemanticVocab.NS en lugar de la variable local NS
+            Resource clasePersona = ontModel.createResource(SemanticVocab.NS + "Persona");
             clasePersona.addProperty(RDF.type, RDFS.Class);
-            clasePersona.addProperty(RDFS.subClassOf, foafPerson); // Conexión con el exterior
+            clasePersona.addProperty(RDFS.subClassOf, foafPerson);
 
-            Resource claseObjetoFisico = ontModel.createResource(NS + "ObjetoFisico");
+            Resource claseObjetoFisico = ontModel.createResource(SemanticVocab.NS + "ObjetoFisico");
             claseObjetoFisico.addProperty(RDF.type, RDFS.Class);
 
-            Resource claseEvento = ontModel.createResource(NS + "Evento");
+            Resource claseEvento = ontModel.createResource(SemanticVocab.NS + "Evento");
             claseEvento.addProperty(RDF.type, RDFS.Class);
 
-            Resource claseProcedimiento = ontModel.createResource(NS + "Procedimiento");
+            Resource claseProcedimiento = ontModel.createResource(SemanticVocab.NS + "Procedimiento");
             claseProcedimiento.addProperty(RDF.type, RDFS.Class);
 
             // =================================================================
-            // 3. DEFINICIÓN DE TUS CLASES (SUBCLASES DEL DOMINIO)
+            // 3. DEFINICIÓN DE TUS CLASES (SUBCLASES)
             // =================================================================
-            Resource claseMecanico = ontModel.createResource(NS + "Mecanico");
+            Resource claseMecanico = ontModel.createResource(SemanticVocab.NS + "Mecanico");
             claseMecanico.addProperty(RDF.type, RDFS.Class);
             claseMecanico.addProperty(RDFS.subClassOf, clasePersona);
 
-            Resource claseVehiculo = ontModel.createResource(NS + "Vehiculo");
+            Resource claseVehiculo = ontModel.createResource(SemanticVocab.NS + "Vehiculo");
             claseVehiculo.addProperty(RDF.type, RDFS.Class);
             claseVehiculo.addProperty(RDFS.subClassOf, claseObjetoFisico);
 
-            Resource claseMantenimiento = ontModel.createResource(NS + "Mantenimiento");
+            Resource claseMantenimiento = ontModel.createResource(SemanticVocab.NS + "Mantenimiento");
             claseMantenimiento.addProperty(RDF.type, RDFS.Class);
             claseMantenimiento.addProperty(RDFS.subClassOf, claseEvento);
 
-            Resource claseServicio = ontModel.createResource(NS + "Servicio");
+            Resource claseServicio = ontModel.createResource(SemanticVocab.NS + "Servicio");
             claseServicio.addProperty(RDF.type, RDFS.Class);
             claseServicio.addProperty(RDFS.subClassOf, claseProcedimiento);
 
-            // --- INFERENCIAS LÓGICAS (REGLAS) ---
+            // =================================================================
+            // 4. PROPIEDADES, DOMINIOS, RANGOS E INFERENCIAS INVERSAS
+            // =================================================================
+            ObjectProperty realizadoPor = ontModel.createObjectProperty(SemanticVocab.NS + "realizadoPor");
+            realizadoPor.addProperty(RDFS.domain, claseMantenimiento);
+            realizadoPor.addProperty(RDFS.range, claseMecanico);
 
-            // REGLA 1: Inversa entre Mecánico y Mantenimiento
-            // Si A es realizadoPor B -> B realizaMantenimiento A
-            ObjectProperty realizadoPor = ontModel.createObjectProperty(NS + "realizadoPor");
-            ObjectProperty realizaMantenimiento = ontModel.createObjectProperty(NS + "realizaMantenimiento");
+            ObjectProperty realizaMantenimiento = ontModel.createObjectProperty(SemanticVocab.NS + "realizaMantenimiento");
             realizadoPor.addInverseOf(realizaMantenimiento);
 
-            // REGLA 2: Inversa entre Vehículo y Mantenimiento
-            // Si A es realizadoEn B -> B tieneMantenimiento A
-            ObjectProperty realizadoEn = ontModel.createObjectProperty(NS + "realizadoEn");
-            ObjectProperty tieneMantenimiento = ontModel.createObjectProperty(NS + "tieneMantenimiento");
+            ObjectProperty realizadoEn = ontModel.createObjectProperty(SemanticVocab.NS + "realizadoEn");
+            realizadoEn.addProperty(RDFS.domain, claseMantenimiento);
+            realizadoEn.addProperty(RDFS.range, claseVehiculo);
+
+            ObjectProperty tieneMantenimiento = ontModel.createObjectProperty(SemanticVocab.NS + "tieneMantenimiento");
             realizadoEn.addInverseOf(tieneMantenimiento);
 
-            // REGLA 3: Inversa entre Mantenimiento y Servicio
-            // Si A incluyeServicio B -> B esAplicadoEn A
-            ObjectProperty incluyeServicio = ontModel.createObjectProperty(NS + "incluyeServicio");
-            ObjectProperty aplicadoEn = ontModel.createObjectProperty(NS + "aplicadoEn");
+            ObjectProperty incluyeServicio = ontModel.createObjectProperty(SemanticVocab.NS + "incluyeServicio");
+            incluyeServicio.addProperty(RDFS.domain, claseMantenimiento);
+            incluyeServicio.addProperty(RDFS.range, claseServicio);
+
+            ObjectProperty aplicadoEn = ontModel.createObjectProperty(SemanticVocab.NS + "aplicadoEn");
             incluyeServicio.addInverseOf(aplicadoEn);
 
             dataset.commit();
@@ -97,7 +96,6 @@ public class OntologyReasonerConfig {
             dataset.end();
         }
 
-        // Retornamos el modelo inteligente para que Spring lo use en los controladores
         return ontModel;
     }
 }

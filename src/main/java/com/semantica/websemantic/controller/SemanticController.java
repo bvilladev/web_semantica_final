@@ -1,95 +1,47 @@
 package com.semantica.websemantic.controller;
 
 
-import com.semantica.websemantic.service.SemanticService;
-import org.apache.jena.ontology.OntModel;
-import org.apache.jena.query.*;
-import org.apache.jena.rdf.model.Model;
+import com.semantica.websemantic.repository.SemanticRepository;
+import com.semantica.websemantic.service.RdfDocumentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.io.ByteArrayOutputStream;
 
 @RestController
-@RequestMapping("/api/semantica") // Prefijo base
+@RequestMapping("/api/semantica")
 public class SemanticController {
 
-//    private final SemanticService semanticService;
-//
-//    public SemanticController(SemanticService semanticService) {
-//        this.semanticService = semanticService;
-//    }
-//
-//    // SOLO métodos de lectura/consulta
-//
-//    @PostMapping("/sparql1")
-//    public ResponseEntity<String> ejecutarSparql(@RequestBody String queryStr) {
-//        Dataset ds = semanticService.getDataset();
-//        ds.begin(ReadWrite.READ);
-//        try (QueryExecution qExec = QueryExecutionFactory.create(queryStr, ds)) {
-//            // Ejecutamos la consulta SELECT
-//            ResultSet results = qExec.execSelect();
-//
-//            // Convertimos el resultado a formato JSON
-//            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-//            ResultSetFormatter.outputAsJSON(outputStream, results);
-//
-//            return ResponseEntity.ok(outputStream.toString());
-//        } catch (Exception e) {
-//            return ResponseEntity.badRequest().body("Error en la consulta SPARQL: " + e.getMessage());
-//        } finally {
-//            ds.end();
-//        }
-//    }
-
-//    @GetMapping("/grafo")
-//    public ResponseEntity<String> verGrafo() {
-//        // 1. Obtenemos el Dataset (la base de datos) del servicio
-//        Dataset ds = semanticService.getDataset();
-//
-//        // 2. Iniciamos una transacción de LECTURA (Obligatorio en Jena)
-//        ds.begin(ReadWrite.READ);
-//        try {
-//            // 3. Obtenemos el modelo por defecto donde guardaste los vehículos
-//            Model model = ds.getDefaultModel();
-//
-//            // 4. Preparamos un flujo de salida para escribir el texto
-//            ByteArrayOutputStream out = new ByteArrayOutputStream();
-//
-//            // 5. Escribimos el grafo en formato TURTLE (el más legible)
-//            org.apache.jena.riot.RDFDataMgr.write(out, model, org.apache.jena.riot.Lang.TURTLE);
-//
-//            // 6. Devolvemos el texto generado
-//            return ResponseEntity.ok(out.toString());
-//        } catch (Exception e) {
-//            return ResponseEntity.internalServerError().body("Error al leer el grafo: " + e.getMessage());
-//        } finally {
-//            // 7. Cerramos la transacción siempre
-//            ds.end();
-//        }
-//    }
-
-
-    // 1. Inyectamos el modelo inteligente que creamos en OntologyReasonerConfig
-    private final OntModel ontModel;
-
-    public SemanticController(OntModel ontModel) {
-        this.ontModel = ontModel;
+    private final SemanticRepository semanticRepository;
+    private final RdfDocumentService rdfDocumentService; // NUEVA INYECCIÓN
+    public SemanticController(SemanticRepository semanticRepository, RdfDocumentService rdfDocumentService) {
+        this.semanticRepository = semanticRepository;
+        this.rdfDocumentService = rdfDocumentService;
     }
 
     @PostMapping("/sparql")
     public ResponseEntity<String> ejecutarSparql(@RequestBody String queryStr) {
-        // 2. Ejecutamos la consulta directamente sobre el ontModel (que ya incluye el Reasoner)
-        // Nota: El OntModel maneja las transacciones de lectura automáticamente en Jena,
-        // pero le pasamos el modelo a la factoría de consultas.
-        try (QueryExecution qExec = QueryExecutionFactory.create(queryStr, ontModel)) {
-            ResultSet results = qExec.execSelect();
-
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            ResultSetFormatter.outputAsJSON(outputStream, results);
-
-            return ResponseEntity.ok(outputStream.toString());
+        try {
+            // El controlador ahora está limpio y solo delega la tarea al Repositorio
+            String jsonResult = semanticRepository.ejecutarConsultaSparql(queryStr);
+            return ResponseEntity.ok(jsonResult);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error en la consulta SPARQL: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
+
+    // =================================================================
+    // NUEVO ENDPOINT PARA EXPORTAR EL DOCUMENTO RDF (Evalúa el Criterio 4)
+    // =================================================================
+    @GetMapping(value = "/exportar-documento", produces = "text/plain")
+    public ResponseEntity<String> descargarDocumentoRdf(
+            @RequestParam(defaultValue = "TURTLE") String formato) {
+        try {
+            // Llamamos a nuestro nuevo servicio
+            String documento = rdfDocumentService.generarDocumentoRDF(formato);
+            return ResponseEntity.ok(documento);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error al generar documento: " + e.getMessage());
+        }
+    }
+
+
 }

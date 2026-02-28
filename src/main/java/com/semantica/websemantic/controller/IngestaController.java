@@ -1,13 +1,12 @@
 package com.semantica.websemantic.controller;
 
 
-import com.semantica.websemantic.dto.MantenimientoDTO;
-import com.semantica.websemantic.dto.MecanicoDTO;
-import com.semantica.websemantic.dto.ServicioDTO;
-import com.semantica.websemantic.dto.VehiculoDTO;
+import com.semantica.websemantic.entity.dto.MantenimientoDTO;
+import com.semantica.websemantic.entity.dto.MecanicoDTO;
+import com.semantica.websemantic.entity.dto.ServicioDTO;
+import com.semantica.websemantic.entity.dto.VehiculoDTO;
 import com.semantica.websemantic.service.SemanticService;
-import com.semantica.websemantic.service.TallerClient;
-import lombok.Getter;
+import com.semantica.websemantic.client.TallerClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

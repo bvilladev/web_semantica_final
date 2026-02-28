@@ -1,4 +1,4 @@
-package com.semantica.websemantic.dto;
+package com.semantica.websemantic.entity.dto;
 
 
 import lombok.Data;

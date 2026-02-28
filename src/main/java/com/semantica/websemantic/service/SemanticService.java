@@ -1,10 +1,12 @@
 package com.semantica.websemantic.service;
 
 
-import com.semantica.websemantic.dto.MantenimientoDTO;
-import com.semantica.websemantic.dto.MecanicoDTO;
-import com.semantica.websemantic.dto.ServicioDTO;
-import com.semantica.websemantic.dto.VehiculoDTO;
+import com.semantica.websemantic.entity.dto.MantenimientoDTO;
+import com.semantica.websemantic.entity.dto.MecanicoDTO;
+import com.semantica.websemantic.entity.dto.ServicioDTO;
+import com.semantica.websemantic.entity.dto.VehiculoDTO;
+import com.semantica.websemantic.repository.SemanticRepository;
+import com.semantica.websemantic.vocabulary.SemanticVocab;
 import org.apache.jena.ontology.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
@@ -17,23 +19,18 @@ import org.springframework.stereotype.Service;
 @Service
 public class SemanticService {
 
-    private final Dataset dataset;
-    private final OntModel ontModel; // 1. AGREGAMOS EL MODELO INTELIGENTE
+    private final SemanticRepository repository;
     private final String NS = "http://localhost:8081/ontology#";
-    // NUEVO: Prefijos externos para Linked Data
-    private final String DBPEDIA_RES = "http://es.dbpedia.org/resource/";
 
-    // 2. INYECTAMOS AMBOS EN EL CONSTRUCTOR
-    public SemanticService(Dataset dataset, OntModel ontModel) {
-        this.dataset = dataset;
-        this.ontModel = ontModel;
+    public SemanticService(SemanticRepository repository) {
+        this.repository = repository;
     }
 
     // --- 1. PROCESAR VEHÍCULO ---
     public void procesarVehiculo(VehiculoDTO dto) {
-        dataset.begin(ReadWrite.WRITE);
-        try {
-            Model model = ontModel;
+        repository.guardarEnGrafo(() -> {
+            OntModel model = repository.getOntModel();
+
             Resource vehiculoRes = model.createResource(NS + "vehiculo/" + dto.getPlaca());
 
             vehiculoRes.addProperty(RDF.type, model.createResource(NS + "Vehiculo"));
@@ -45,28 +42,29 @@ public class SemanticService {
             if(dto.getColor() != null) vehiculoRes.addProperty(model.createProperty(NS + "color"), dto.getColor());
             if(dto.getNombrePropietario() != null) vehiculoRes.addProperty(model.createProperty(NS + "nombrePropietario"), dto.getNombrePropietario());
 
-            // 2. LA MAGIA DE LINKED DATA: Enlazando con el exterior
+            // ====================================================================
+            // 2. LA MAGIA DE LINKED DATA: Enlazando con el exterior (DBpedia)
+            // ====================================================================
             if(dto.getMarca() != null) {
-                // Guardamos el literal por comodidad
-                vehiculoRes.addProperty(model.createProperty(NS + "marcaLiteral"), dto.getMarca());
+                // A) Guardamos el literal por comodidad
+                vehiculoRes.addProperty(model.createProperty(SemanticVocab.NS + "marcaLiteral"), dto.getMarca());
 
-                // Creamos un enlace real (URI) hacia DBpedia reemplazando espacios con guiones bajos
+                // B) Creamos un enlace real (URI) hacia DBpedia reemplazando espacios con guiones bajos
                 String marcaFormateada = dto.getMarca().replace(" ", "_");
-                Resource marcaExternaURI = model.createResource(DBPEDIA_RES + marcaFormateada);
 
-                // Le decimos a la máquina que la marca del vehículo apunta a esa URI de Internet
-                vehiculoRes.addProperty(model.createProperty(NS + "marcaVinculada"), marcaExternaURI);
+                // ¡AQUÍ USAMOS SemanticVocab.DBPEDIA_RES!
+                Resource marcaExternaURI = model.createResource(SemanticVocab.DBPEDIA_RES + marcaFormateada);
+
+                // C) Le decimos a la máquina que la marca del vehículo apunta a esa URI de Internet
+                vehiculoRes.addProperty(model.createProperty(SemanticVocab.NS + "marcaVinculada"), marcaExternaURI);
             }
 
-            dataset.commit();
-        } finally { dataset.end(); }
+        });
     }
-
     // --- 2. PROCESAR MECÁNICO ---
     public void procesarMecanico(MecanicoDTO dto) {
-        dataset.begin(ReadWrite.WRITE);
-        try {
-            Model model = ontModel;
+        repository.guardarEnGrafo(() -> {
+            OntModel model = repository.getOntModel();
             String nombreURI = dto.getNombre().replaceAll(" ", "_");
             Resource mecanicoRes = model.createResource(NS + "mecanico/" + nombreURI);
 
@@ -79,15 +77,13 @@ public class SemanticService {
             if(dto.getEmail() != null) mecanicoRes.addProperty(model.createProperty(NS + "email"), dto.getEmail());
             if(dto.getEspecialidad() != null) mecanicoRes.addProperty(model.createProperty(NS + "especialidad"), dto.getEspecialidad());
 
-            dataset.commit();
-        } finally { dataset.end(); }
+        });
     }
 
     // --- 3. PROCESAR SERVICIO (NUEVO) ---
     public void procesarServicio(ServicioDTO dto) {
-        dataset.begin(ReadWrite.WRITE);
-        try {
-            Model model = ontModel;
+        repository.guardarEnGrafo(() -> {
+            OntModel model = repository.getOntModel();
             // Usamos el ID o un nombre formateado para la URI
             Resource servicioRes = model.createResource(NS + "servicio/" + dto.getId());
 
@@ -99,15 +95,12 @@ public class SemanticService {
             if(dto.getDuracion() != null) servicioRes.addProperty(model.createProperty(NS + "duracion"), String.valueOf(dto.getDuracion()));
             if(dto.getObservacion() != null) servicioRes.addProperty(model.createProperty(NS + "observacion"), dto.getObservacion());
 
-            dataset.commit();
-        } finally { dataset.end(); }
+        });
     }
-
     // --- 4. PROCESAR MANTENIMIENTO (LA CONEXIÓN TOTAL) ---
     public void procesarMantenimiento(MantenimientoDTO dto) {
-        dataset.begin(ReadWrite.WRITE);
-        try {
-            Model model = ontModel;
+        repository.guardarEnGrafo(() -> {
+            OntModel model = repository.getOntModel();
             Resource mantRes = model.createResource(NS + "mantenimiento/" + dto.getId());
 
             mantRes.addProperty(RDF.type, model.createResource(NS + "Mantenimiento"));
@@ -139,10 +132,6 @@ public class SemanticService {
                     mantRes.addProperty(model.createProperty(NS + "incluyeServicio"), servRes);
                 }
             }
-
-            dataset.commit();
-        } finally { dataset.end(); }
+        });
     }
-
-    public Dataset getDataset() { return dataset; }
 }
