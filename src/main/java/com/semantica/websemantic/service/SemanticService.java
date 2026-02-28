@@ -20,6 +20,8 @@ public class SemanticService {
     private final Dataset dataset;
     private final OntModel ontModel; // 1. AGREGAMOS EL MODELO INTELIGENTE
     private final String NS = "http://localhost:8081/ontology#";
+    // NUEVO: Prefijos externos para Linked Data
+    private final String DBPEDIA_RES = "http://es.dbpedia.org/resource/";
 
     // 2. INYECTAMOS AMBOS EN EL CONSTRUCTOR
     public SemanticService(Dataset dataset, OntModel ontModel) {
@@ -42,6 +44,19 @@ public class SemanticService {
             if(dto.getModelo() != null) vehiculoRes.addProperty(model.createProperty(NS + "modelo"), dto.getModelo());
             if(dto.getColor() != null) vehiculoRes.addProperty(model.createProperty(NS + "color"), dto.getColor());
             if(dto.getNombrePropietario() != null) vehiculoRes.addProperty(model.createProperty(NS + "nombrePropietario"), dto.getNombrePropietario());
+
+            // 2. LA MAGIA DE LINKED DATA: Enlazando con el exterior
+            if(dto.getMarca() != null) {
+                // Guardamos el literal por comodidad
+                vehiculoRes.addProperty(model.createProperty(NS + "marcaLiteral"), dto.getMarca());
+
+                // Creamos un enlace real (URI) hacia DBpedia reemplazando espacios con guiones bajos
+                String marcaFormateada = dto.getMarca().replace(" ", "_");
+                Resource marcaExternaURI = model.createResource(DBPEDIA_RES + marcaFormateada);
+
+                // Le decimos a la máquina que la marca del vehículo apunta a esa URI de Internet
+                vehiculoRes.addProperty(model.createProperty(NS + "marcaVinculada"), marcaExternaURI);
+            }
 
             dataset.commit();
         } finally { dataset.end(); }

@@ -6,6 +6,9 @@ import org.apache.jena.ontology.OntModelSpec;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -13,6 +16,9 @@ import org.springframework.context.annotation.Configuration;
 public class OntologyReasonerConfig {
 
     private final String NS = "http://localhost:8081/ontology#";
+    // Incorporamos el vocabulario estándar mundial FOAF para personas
+    private final String FOAF_NS = "http://xmlns.com/foaf/0.1/";
+
 
     @Bean
     public OntModel ontologyModel(Dataset dataset) {
@@ -20,9 +26,52 @@ public class OntologyReasonerConfig {
         // Usamos OWL_MEM_MICRO_RULE_INF: Soporta propiedades inversas, simétricas y jerarquías
         OntModel ontModel = ModelFactory.createOntologyModel(OntModelSpec.OWL_MEM_MICRO_RULE_INF, dataset.getDefaultModel());
 
+
         // Iniciamos transacción para guardar las reglas en el grafo
         dataset.begin(ReadWrite.WRITE);
         try {
+
+            // =================================================================
+            // 1. REUTILIZACIÓN DE ONTOLOGÍAS EXTERNAS (LINKED DATA)
+            // =================================================================
+            Resource foafPerson = ontModel.createResource(FOAF_NS + "Person");
+            foafPerson.addProperty(RDF.type, RDFS.Class);
+
+            // =================================================================
+            // 2. DEFINICIÓN DE SUPERCLASES (NIVEL ALTO)
+            // =================================================================
+            Resource clasePersona = ontModel.createResource(NS + "Persona");
+            clasePersona.addProperty(RDF.type, RDFS.Class);
+            clasePersona.addProperty(RDFS.subClassOf, foafPerson); // Conexión con el exterior
+
+            Resource claseObjetoFisico = ontModel.createResource(NS + "ObjetoFisico");
+            claseObjetoFisico.addProperty(RDF.type, RDFS.Class);
+
+            Resource claseEvento = ontModel.createResource(NS + "Evento");
+            claseEvento.addProperty(RDF.type, RDFS.Class);
+
+            Resource claseProcedimiento = ontModel.createResource(NS + "Procedimiento");
+            claseProcedimiento.addProperty(RDF.type, RDFS.Class);
+
+            // =================================================================
+            // 3. DEFINICIÓN DE TUS CLASES (SUBCLASES DEL DOMINIO)
+            // =================================================================
+            Resource claseMecanico = ontModel.createResource(NS + "Mecanico");
+            claseMecanico.addProperty(RDF.type, RDFS.Class);
+            claseMecanico.addProperty(RDFS.subClassOf, clasePersona);
+
+            Resource claseVehiculo = ontModel.createResource(NS + "Vehiculo");
+            claseVehiculo.addProperty(RDF.type, RDFS.Class);
+            claseVehiculo.addProperty(RDFS.subClassOf, claseObjetoFisico);
+
+            Resource claseMantenimiento = ontModel.createResource(NS + "Mantenimiento");
+            claseMantenimiento.addProperty(RDF.type, RDFS.Class);
+            claseMantenimiento.addProperty(RDFS.subClassOf, claseEvento);
+
+            Resource claseServicio = ontModel.createResource(NS + "Servicio");
+            claseServicio.addProperty(RDF.type, RDFS.Class);
+            claseServicio.addProperty(RDFS.subClassOf, claseProcedimiento);
+
             // --- INFERENCIAS LÓGICAS (REGLAS) ---
 
             // REGLA 1: Inversa entre Mecánico y Mantenimiento
