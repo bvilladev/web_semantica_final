@@ -62,11 +62,11 @@
 		</dependency>
 		<!-- Apache Jena: El motor de Web Semántica -->
 		<dependency>
-			<groupId>org.apache.jena</groupId>
-			<artifactId>apache-jena-libs</artifactId>
-			<version>5.0.0</version> <!-- Versión moderna compatible con Java recientes -->
-			<type>pom</type>
-		</dependency>
+		<groupId>org.apache.jena</groupId>
+		<artifactId>apache-jena-libs</artifactId>
+		<version>5.0.0</version> <!-- Versión moderna compatible con Java recientes -->
+		<type>pom</type>
+	</dependency>
 	</dependencies>
 
 	<build>

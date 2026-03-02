@@ -44,4 +44,19 @@ public class SemanticController {
     }
 
 
+    @GetMapping(value = "/grafo", produces = "application/json")
+    public ResponseEntity<String> obtenerGrafoCompleto() {
+        try {
+            // Reutilizamos el RdfDocumentService que creamos anteriormente.
+            // Le pedimos específicamente el formato "JSON-LD" para que
+            // navegadores y aplicaciones frontend lo lean fácilmente como un JSON normal.
+            String grafoJson = rdfDocumentService.generarDocumentoRDF("JSON-LD");
+
+            return ResponseEntity.ok(grafoJson);
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error al obtener el grafo: " + e.getMessage());
+        }
+    }
+
 }
