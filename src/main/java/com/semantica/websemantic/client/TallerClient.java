@@ -13,7 +13,7 @@ import java.util.List;
 public class TallerClient {
 
     private final RestTemplate restTemplate = new RestTemplate();
-    private final String BASE_URL = "https://machine.yoelfernandez.shop/api/v1"; // URL de tu Taller original
+    private final String BASE_URL = "http://localhost:8080 stt/api/v1"; // URL de tu Taller original
 
     public List<VehiculoDTO> obtenerTodosLosVehiculos() {
         // Llama a tu endpoint GET existente [Línea 17 de controllers.txt]
